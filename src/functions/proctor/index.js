@@ -213,6 +213,32 @@ const searchForIndexedFaces = async (imageBytes) => {
   return faceMatchTest;
 };
 
+const fetchEmotions = async (imageBytes) => {
+  /*
+    Detect Emotions
+    Uses Rekognition's DetectFaces functionality
+  */
+
+  const facesTest = {
+    TestName: "Emotion Detection",
+  };
+
+  const detectFaces = () =>
+    rekognition.detectFaces({ Image: { Bytes: imageBytes }, Attributes: ["ALL"] }).promise();
+
+  try {
+    const faces = await detectFaces();
+    const nFaces = faces.FaceDetails.length;
+    facesTest.Success = nFaces === 1;
+    facesTest.Details = faces.FaceDetails.map(details => details.Emotions[0].Type).join(", ")
+  } catch (e) {
+    console.log(e);
+    facesTest.Success = false;
+    facesTest.Details = "Server error";
+  }
+  return facesTest;
+};
+
 exports.processHandler = async (event) => {
   const body = JSON.parse(event.body);
   const imageBytes = Buffer.from(body.image, "base64");
@@ -222,6 +248,7 @@ exports.processHandler = async (event) => {
     searchForIndexedFaces(imageBytes),
     fetchFaces(imageBytes),
     fetchModerationLabels(imageBytes),
+    fetchEmotions(imageBytes)
   ]);
 
   return respond(200, result.flat());
